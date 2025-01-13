@@ -241,13 +241,7 @@ class Samoware:
 
 
 async def test():
-    mail_session = MailSession(login="vgp24r013", password="2i9btk35")
-    async with Samoware(mail_session=mail_session) as samoware:
-        await samoware.auth()
-        await samoware.send_session_info()
-        # await samoware.open_folder()
-        # print(await samoware.get_last_mail())
-        # await samoware.logout()
+    pass
 
 
 if __name__ == "__main__":
