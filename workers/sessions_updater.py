@@ -45,7 +45,7 @@ async def update_sessions__async():
                     logger.exception("Error while updating mail session")
 
 
-@grouper.task(rocketry.conds.every("2 minute"))
+@grouper.task(rocketry.conds.every("15 minute"))
 async def close_other_sessions__async():
     async with database.Database() as db:
         async with db.session() as db_session:
