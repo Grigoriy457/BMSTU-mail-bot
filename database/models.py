@@ -40,5 +40,7 @@ class MailSession(Base):
     last_mail_datetime: Mapped[datetime.datetime] = Column(DateTime, nullable=False, server_default=func.now())
     last_check: Mapped[datetime.datetime] = Column(DateTime, nullable=False, server_default=func.now())
 
+    tg_user: Mapped[TgUser] = relationship("TgUser", uselist=False, lazy="selectin")
+
     def __repr__(self):
         return f"<MailSession: {pprint.pformat(vars(self))}>"
