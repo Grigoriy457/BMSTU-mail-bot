@@ -120,7 +120,8 @@ class Samoware:
         data.add_field("session", self.mail_session.url_id)
         headers = {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "x-requested-with": "XMLHttpRequest"
+            "x-requested-with": "XMLHttpRequest",
+            "Referer": "https://student.bmstu.ru/"
         }
         async with self.aiohttp_session.post(self.api_path + "/sys/sessionadmin.wcgp", data=data, headers=headers) as response:
             if response.status != 200:
@@ -132,10 +133,10 @@ class Samoware:
                     login_address=session["loginAddress"],
                     login_time=int(session["loginTime"]),
                     protocol=session["protocol"],
-                    browser=session["sessionInfo"].get("browser"),
-                    client_info=session["sessionInfo"].get("clientInfo"),
-                    platform=session["sessionInfo"].get("platform"),
-                    is_tg_bot=session["sessionInfo"].get("is_tg_bot", False) == "true"
+                    browser=session.get("sessionInfo", dict()).get("browser"),
+                    client_info=session.get("sessionInfo", dict()).get("clientInfo"),
+                    platform=session.get("sessionInfo", dict()).get("platform"),
+                    is_tg_bot=session.get("sessionInfo", dict()).get("is_tg_bot", False) == "true"
                 )
                 for session in json.loads(await response.text())["activeSessions"]
             ]
@@ -146,7 +147,9 @@ class Samoware:
         data.add_field("id", str(session_id))
         data.add_field("session", self.mail_session.url_id)
         headers = {
-            "Content-Type": "application/x-www-form-urlencoded"
+            "Content-Type": "application/x-www-form-urlencoded",
+            "x-requested-with": "XMLHttpRequest",
+            "Referer": "https://student.bmstu.ru/"
         }
         async with self.aiohttp_session.post(self.api_path + "/sys/sessionadmin.wcgp", data=data, headers=headers) as response:
             if response.status != 200:
