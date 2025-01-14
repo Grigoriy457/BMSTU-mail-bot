@@ -1,4 +1,6 @@
 /config/.env
+Dockerfile
+update.sh
 
 /venv/
 /.idea/

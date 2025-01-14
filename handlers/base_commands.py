@@ -23,11 +23,7 @@ async def start_handler(message: types.Message, state: FSMContext, db_session: d
     await db.add_tg_user(message.from_user.id, message.from_user.username)
 
     await message.answer(
-<<<<<<< HEAD
-        "👋 Привет! Я буду тебя уведомлять о новых письмах, которые ты получишь в своем почтовом ящике.",
-=======
         "👋 Привет! Я буду тебя уведомлять о новых письмах, которые ты получаешь в своем почтовом ящике.",
->>>>>>> 6aef4e855c7b17f0105f8f1d087a24d154ccd566
         reply_markup=main_keyboard
     )
 

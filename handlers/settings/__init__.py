@@ -23,12 +23,8 @@ async def settings(message: Union[types.Message, types.CallbackQuery], db_sessio
     text = "<b>📧 Почтовые ящики</b>\n"\
            "Подключить и отключить почтовые ящики\n\n"\
            "<b>🔔 Вкл/Выкл звук уведомлений</b>\n"\
-<<<<<<< HEAD
-           "Включение или выключение звука уведомлений телеграма о новых письмах"
-=======
            "Включение или выключение звука уведомлений телеграма о новых письмах\n\n"\
            "ℹ️ Почта обновляется каждые 10 минут"
->>>>>>> 6aef4e855c7b17f0105f8f1d087a24d154ccd566
     reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="📧 Почтовые ящики", callback_data="settings__mail_sessions")],
         [types.InlineKeyboardButton(
@@ -39,8 +35,5 @@ async def settings(message: Union[types.Message, types.CallbackQuery], db_sessio
     if isinstance(message, types.Message):
         await message.answer(text=text, reply_markup=reply_markup)
     else:
-<<<<<<< HEAD
-        await message.edit_text(text=text, reply_markup=reply_markup)
-=======
         await message.message.edit_text(text=text, reply_markup=reply_markup)
->>>>>>> 6aef4e855c7b17f0105f8f1d087a24d154ccd566
+
