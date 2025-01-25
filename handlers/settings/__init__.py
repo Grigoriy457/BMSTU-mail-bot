@@ -36,3 +36,4 @@ async def settings(message: Union[types.Message, types.CallbackQuery], db_sessio
         await message.answer(text=text, reply_markup=reply_markup)
     else:
         await message.message.edit_text(text=text, reply_markup=reply_markup)
+
