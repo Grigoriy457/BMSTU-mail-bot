@@ -44,8 +44,8 @@ async def send_notify(session_id: int, mail: samoware.Mail, chat_id: int, mail_i
                     disable_notification=not with_sound
                 )
                 return
-            except aiogram.exceptions.TelegramBadRequest:
-                logger.exception("Error while sending notify")
+            except (aiogram.exceptions.TelegramBadRequest, aiogram.exceptions.TelegramServerError):
+                logger.exception(f"Error while sending notify (mail_session_id={session_id}, mail_uid={mail.uid})")
 
         await bot.send_message(
             chat_id=chat_id,
