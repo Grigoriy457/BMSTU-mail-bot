@@ -192,48 +192,38 @@ class Samoware:
                 self.mail_session.cookie_session = response.cookies.get("CGateProWebUser").value
                 self.update_cookies()
 
+    @staticmethod
+    def parse_mails(mail_elems, from_datetime: datetime.datetime = None) -> List[Mail]:
+        return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None) or t.send_datetime >= from_datetime), [
+            Mail(
+               uid=int(mail_elem.get("uid")),
+               flags=mail_elem.find("flags").text.split(","),
+               from_name=mail_elem.find("e-from").get("realname"),
+               from_email=mail_elem.find("e-from").text,
+               title=(lambda t: t.text if (t is not None) else None)(mail_elem.find("subject")),
+               content_type=mail_elem.find("content-type").text,
+               send_datetime=datetime.datetime.strptime(mail_elem.find("internaldate").text, '%Y%m%dT%H%M%SZ'),
+               size=int(mail_elem.find("size").text)
+            )
+            for mail_elem in mail_elems
+            if mail_elem.find("e-from") is not None
+       ]))
+
     async def get_last_mail(self, from_datetime: datetime.datetime = None) -> List[Mail]:
         data = f"""<XIMSS><folderBrowse folder="INBOX-MM-1" id="{self.open_inbox_folder_id}"><index from="0" till="49"/></folderBrowse></XIMSS>"""
         async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
             if response.status == 550:
                 raise AuthError("Session expired")
             response_xml = BeautifulSoup(await response.text(), 'lxml')
-            return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None) or t.send_datetime >= from_datetime), [
-                Mail(
-                    uid=int(mail_elem.get("uid")),
-                    flags=mail_elem.find("flags").text.split(","),
-                    from_name=mail_elem.find("e-from").get("realname"),
-                    from_email=mail_elem.find("e-from").text,
-                    title=(lambda t: t.text if (t is not None) else None)(mail_elem.find("subject")),
-                    content_type=mail_elem.find("content-type").text,
-                    send_datetime=datetime.datetime.strptime(mail_elem.find("internaldate").text, '%Y%m%dT%H%M%SZ'),
-                    size=int(mail_elem.find("size").text)
-                )
-                for mail_elem in response_xml.find_all("folderreport")
-                if mail_elem.find("e-from") is not None
-            ]))
+            return self.parse_mails(response_xml.find_all("folderreport"))
 
-    # async def sync_mail(self):
-    #     data = f"""<XIMSS><folderSync folder="INBOX-MM-1" limit="300" id="{self.open_inbox_folder_id}"></folderSync></XIMSS>"""
-    #     async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
-    #         if response.status == 550:
-    #             raise AuthError("Session expired")
-    #         response_xml = BeautifulSoup(await response.text(), 'lxml')
-    #         mail_elems = response_xml.find_all("folderreport", {"mode": "added"})
-    #         if len(mail_elems) == 0:
-    #             return None
-    #         mail_elem = max(mail_elems, key=lambda t: int(t.get("uid")))
-    #
-    #         return Mail(
-    #             uid=int(mail_elem.get("uid")),
-    #             flags=mail_elem.find("flags").text,
-    #             from_name=mail_elem.find("e-from").get("realname"),
-    #             from_email=mail_elem.find("e-from").text,
-    #             title=mail_elem.find("subject").text,
-    #             content_type=mail_elem.find("content-type").text,
-    #             send_datetime=datetime.datetime.strptime(mail_elem.find("internaldate").text, '%Y%m%dT%H%M%SZ'),
-    #             size=int(mail_elem.find("size").text)
-    #         )
+    async def sync_mail(self) -> List[Mail]:
+        data = f"""<XIMSS><folderSync folder="INBOX-MM-1" limit="300" id="{self.open_inbox_folder_id}"></folderSync></XIMSS>"""
+        async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
+            if response.status == 550:
+                raise AuthError("Session expired")
+            response_xml = BeautifulSoup(await response.text(), 'lxml')
+            return self.parse_mails(response_xml.find_all("folderreport", {"mode": "added"}))
 
     async def get_mail_image(self, mail_id) -> BytesIO:
         async with self.aiohttp_session.get(self.api_path + f"/Session/{self.mail_session.url_id}/FORMAT/Samoware/INBOX-MM-1/{mail_id}") as response:
@@ -281,6 +271,7 @@ async def test():
             # await samoware.open_folder()
             # await db_session.merge(mail_session)
             # await db_session.commit()
+            print(await samoware.sync_mail())
             print(await samoware.get_last_mail())
 
 

@@ -58,6 +58,7 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
         async with samoware.Samoware(mail_session) as samoware_mail:
             try:
                 await samoware_mail.open_folder()
+                last_mails = await samoware_mail.sync_mail()
 
             except samoware.AuthError:
                 await samoware_mail.auth()
@@ -65,9 +66,8 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
                 await samoware_mail.open_folder()
                 await db_session.merge(samoware_mail.mail_session)
                 await db_session.commit()
+                last_mails = await samoware_mail.get_last_mail(from_datetime=mail_session.last_mail_datetime)
 
-
-            last_mails = await samoware_mail.get_last_mail(from_datetime=samoware_mail.mail_session.last_mail_datetime)
             samoware_mail.mail_session.last_check = datetime.datetime.now(tz=pytz.UTC)
             await db_session.merge(samoware_mail.mail_session)
             await db_session.commit()
