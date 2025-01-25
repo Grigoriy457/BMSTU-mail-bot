@@ -6,11 +6,11 @@ from typing import Optional
 
 import datetime
 import pytz
-import sqlalchemy
 
 import rocketry.conds
 from rocketry import Grouper
 
+import config
 from dispatcher import bot, logger
 import database
 import samoware
@@ -66,14 +66,15 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
                 await db_session.merge(samoware_mail.mail_session)
                 await db_session.commit()
 
-            last_mail = await samoware_mail.get_last_mail()
+
+            last_mails = await samoware_mail.get_last_mail(from_datetime=samoware_mail.mail_session.last_mail_datetime)
             samoware_mail.mail_session.last_check = datetime.datetime.now(tz=pytz.UTC)
             await db_session.merge(samoware_mail.mail_session)
             await db_session.commit()
-            if last_mail is None:
+            if len(last_mails) == 0:
                 return False
 
-            if last_mail.send_datetime > mail_session.last_mail_datetime:
+            for last_mail in last_mails[::-1]:
                 mail_image = await samoware_mail.get_mail_image(last_mail.uid)
                 await send_notify(
                     mail_session.id,
@@ -83,19 +84,21 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
                     with_sound=(await mail_session.awaitable_attrs.tg_user).notify_with_sound
                 )
 
-                mail_session.last_mail_datetime = last_mail.send_datetime
-                await db_session.merge(mail_session)
-                await db_session.commit()
-                return True
+            mail_session.last_mail_datetime = last_mails[0].send_datetime
+            await db_session.merge(mail_session)
+            await db_session.commit()
+
+            for session in (await samoware_mail.get_active_sessions()):
+                if session.is_tg_bot and (not session.is_my_session):
+                    await samoware_mail.close_session(session_id=session.id)
+            return True
 
     except Exception:
         logger.exception("Error while checking mail")
         return None
 
-    return False
 
-
-@grouper.task(rocketry.conds.every("10 minutes"))
+@grouper.task(rocketry.conds.every(f"{config.SAMOWARE_CHECK_INTERVAL_MINUTES} minutes"))
 async def check_mail__async():
     async with database.Database() as db:
         async with db.session() as db_session:

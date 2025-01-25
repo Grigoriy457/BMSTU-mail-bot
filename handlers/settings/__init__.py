@@ -24,7 +24,7 @@ async def settings(message: Union[types.Message, types.CallbackQuery], db_sessio
            "Подключить и отключить почтовые ящики\n\n"\
            "<b>🔔 Вкл/Выкл звук уведомлений</b>\n"\
            "Включение или выключение звука уведомлений телеграма о новых письмах\n\n"\
-           "ℹ️ Почта обновляется каждые 10 минут"
+           f"ℹ️ Почта обновляется каждые {config.SAMOWARE_CHECK_INTERVAL_MINUTES} минут"
     reply_markup = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="📧 Почтовые ящики", callback_data="settings__mail_sessions")],
         [types.InlineKeyboardButton(

@@ -1,15 +1,12 @@
 import asyncio
-from aiogram import types
-from io import BytesIO
 
 import datetime
 import pytz
-import sqlalchemy
 
 import rocketry.conds
 from rocketry import Grouper
 
-from dispatcher import bot, logger
+from dispatcher import logger
 import database
 import samoware
 
@@ -17,7 +14,7 @@ import samoware
 grouper = Grouper(execution="async")
 
 
-@grouper.task(rocketry.conds.every("5 minutes"))
+# @grouper.task(rocketry.conds.every("5 minutes"))
 async def update_sessions__async():
     async with database.Database() as db:
         async with db.session() as db_session:

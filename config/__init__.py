@@ -7,6 +7,7 @@ config = dotenv_values("./config/.env")
 BOT_TOKEN = config["BOT_TOKEN"]
 
 SAMOWARE_CLIENT_NAME = config["SAMOWARE_CLIENT_NAME"]
+SAMOWARE_CHECK_INTERVAL_MINUTES = int(config["SAMOWARE_CHECK_INTERVAL_MINUTES"])
 
 DB_HOST = config["DB_HOST"]
 DB_NAME = config["DB_NAME"]
