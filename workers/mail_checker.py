@@ -19,7 +19,7 @@ import samoware
 grouper = Grouper(execution="async")
 
 
-async def send_notify(session_id: int, mail: samoware.Mail, mail_image: BytesIO, chat_id: int, with_sound: bool = True):
+async def send_notify(session_id: int, mail: samoware.Mail, chat_id: int, mail_image: BytesIO = None, with_sound: bool = True):
     async with bot.session:
         local_datetime = mail.send_datetime + datetime.timedelta(hours=3)
         text = f"<b>🔔 Новое письмо:</b>\n"\
@@ -33,24 +33,26 @@ async def send_notify(session_id: int, mail: samoware.Mail, mail_image: BytesIO,
             types.InlineKeyboardButton(text="🗑 Удалить", callback_data=f"mail__delete__{session_id}__{mail.uid}")
         ]])
 
-        try:
-            await bot.send_photo(
-                chat_id=chat_id,
-                photo=types.BufferedInputFile(mail_image.read(), filename="image.png"),
-                caption=text,
-                show_caption_above_media=True,
-                reply_markup=reply_markup,
-                disable_notification=not with_sound
-            )
+        if mail_image is not None:
+            try:
+                await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=types.BufferedInputFile(mail_image.read(), filename="image.png"),
+                    caption=text,
+                    show_caption_above_media=True,
+                    reply_markup=reply_markup,
+                    disable_notification=not with_sound
+                )
+                return
+            except aiogram.exceptions.TelegramBadRequest:
+                logger.exception("Error while sending notify")
 
-        except aiogram.exceptions.TelegramBadRequest:
-            logger.exception("Error while sending notify")
-            await bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                reply_markup=reply_markup,
-                disable_notification=not with_sound
-            )
+        await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=reply_markup,
+            disable_notification=not with_sound
+        )
 
 
 async def check_by_session(mail_session, db_session) -> Optional[bool]:
@@ -75,12 +77,16 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
                 return False
 
             for last_mail in last_mails[::-1]:
-                mail_image = await samoware_mail.get_mail_image(last_mail.uid)
+                mail_image = None
+                try:
+                    mail_image = await samoware_mail.get_mail_image(last_mail.uid)
+                except OSError as e:
+                    logger.exception(f"wkhtmltoimage error (mail_session_id={mail_session.id}, mail_uid={last_mail.uid})")
                 await send_notify(
                     mail_session.id,
                     last_mail,
-                    mail_image=mail_image,
                     chat_id=mail_session.tg_user_id,
+                    mail_image=mail_image,
                     with_sound=(await mail_session.awaitable_attrs.tg_user).notify_with_sound
                 )
 
