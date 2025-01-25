@@ -88,9 +88,9 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
             await db_session.merge(mail_session)
             await db_session.commit()
 
-            for session in (await samoware_mail.get_active_sessions()):
-                if session.is_tg_bot and (not session.is_my_session):
-                    await samoware_mail.close_session(session_id=session.id)
+            # for session in (await samoware_mail.get_active_sessions()):
+            #     if session.is_tg_bot and (not session.is_my_session):
+            #         await samoware_mail.close_session(session_id=session.id)
             return True
 
     except Exception:

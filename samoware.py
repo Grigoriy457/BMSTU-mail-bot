@@ -210,6 +210,7 @@ class Samoware:
                     size=int(mail_elem.find("size").text)
                 )
                 for mail_elem in response_xml.find_all("folderreport")
+                if mail_elem.find("e-from") is not None
             ]))
 
     # async def sync_mail(self):
@@ -272,7 +273,7 @@ async def test():
     async with db.session() as db_session:
         mail_session = await db_session.scalar(
             database.select(database.models.MailSession)
-            .where(database.models.MailSession.id == 7)
+            .where(database.models.MailSession.id == 2)
         )
         async with Samoware(mail_session=mail_session) as samoware:
             # await samoware.auth()
@@ -280,8 +281,7 @@ async def test():
             # await samoware.open_folder()
             # await db_session.merge(mail_session)
             # await db_session.commit()
-            await samoware.send_session_info()
-            print(await samoware.get_active_sessions())
+            print(await samoware.get_last_mail())
 
 
 if __name__ == "__main__":
