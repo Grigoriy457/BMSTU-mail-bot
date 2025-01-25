@@ -211,27 +211,27 @@ class Samoware:
                 for mail_elem in response_xml.find_all("folderreport")
             ]))
 
-    async def sync_mail(self):
-        data = f"""<XIMSS><folderSync folder="INBOX-MM-1" limit="300" id="{self.open_inbox_folder_id}"></folderSync></XIMSS>"""
-        async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
-            if response.status == 550:
-                raise AuthError("Session expired")
-            response_xml = BeautifulSoup(await response.text(), 'lxml')
-            mail_elems = response_xml.find_all("folderreport", {"mode": "added"})
-            if len(mail_elems) == 0:
-                return None
-            mail_elem = max(mail_elems, key=lambda t: int(t.get("uid")))
-
-            return Mail(
-                uid=int(mail_elem.get("uid")),
-                flags=mail_elem.find("flags").text,
-                from_name=mail_elem.find("e-from").get("realname"),
-                from_email=mail_elem.find("e-from").text,
-                title=mail_elem.find("subject").text,
-                content_type=mail_elem.find("content-type").text,
-                send_datetime=datetime.datetime.strptime(mail_elem.find("internaldate").text, '%Y%m%dT%H%M%SZ'),
-                size=int(mail_elem.find("size").text)
-            )
+    # async def sync_mail(self):
+    #     data = f"""<XIMSS><folderSync folder="INBOX-MM-1" limit="300" id="{self.open_inbox_folder_id}"></folderSync></XIMSS>"""
+    #     async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
+    #         if response.status == 550:
+    #             raise AuthError("Session expired")
+    #         response_xml = BeautifulSoup(await response.text(), 'lxml')
+    #         mail_elems = response_xml.find_all("folderreport", {"mode": "added"})
+    #         if len(mail_elems) == 0:
+    #             return None
+    #         mail_elem = max(mail_elems, key=lambda t: int(t.get("uid")))
+    #
+    #         return Mail(
+    #             uid=int(mail_elem.get("uid")),
+    #             flags=mail_elem.find("flags").text,
+    #             from_name=mail_elem.find("e-from").get("realname"),
+    #             from_email=mail_elem.find("e-from").text,
+    #             title=mail_elem.find("subject").text,
+    #             content_type=mail_elem.find("content-type").text,
+    #             send_datetime=datetime.datetime.strptime(mail_elem.find("internaldate").text, '%Y%m%dT%H%M%SZ'),
+    #             size=int(mail_elem.find("size").text)
+    #         )
 
     async def get_mail_image(self, mail_id) -> BytesIO:
         async with self.aiohttp_session.get(self.api_path + f"/Session/{self.mail_session.url_id}/FORMAT/Samoware/INBOX-MM-1/{mail_id}") as response:
