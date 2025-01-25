@@ -23,7 +23,7 @@ async def send_notify(session_id: int, mail: samoware.Mail, mail_image: BytesIO,
     async with bot.session:
         local_datetime = mail.send_datetime + datetime.timedelta(hours=3)
         text = f"<b>🔔 Новое письмо:</b>\n"\
-               f"<b>Тема:</b> {mail.title}\n"\
+               f"<b>Тема:</b> {mail.title if mail.title is not None else '—'}\n"\
                f"<b>От:</b> {mail.from_name + ' (' + mail.from_email + ')' if mail.from_name else mail.from_email}\n"\
                f"<b>Дата:</b> {local_datetime.strftime('%d.%m.%Y %H:%M')}\n"
         if "multipart/mixed" in mail.content_type:

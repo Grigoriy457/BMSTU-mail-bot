@@ -26,11 +26,11 @@ class Mail:
     uid: int
     flags: List[str]
     from_email: str
-    title: str
     content_type: str
     send_datetime: datetime.datetime
     size: int
-    from_name: str = None
+    title: Optional[str] = None
+    from_name: Optional[str] = None
 
 
 @dataclass
@@ -93,7 +93,8 @@ class Samoware:
             "x2auth": "1",
             "canUpdatePwd": "1",
             "userName": self.mail_session.login,
-            "password": self.mail_session.password
+            "password": self.mail_session.password,
+            "killOld": "1"
         }
         headers = {
             "Content-Type": ""
@@ -197,13 +198,13 @@ class Samoware:
             if response.status == 550:
                 raise AuthError("Session expired")
             response_xml = BeautifulSoup(await response.text(), 'lxml')
-            return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None or t.send_datetime >= from_datetime)), [
+            return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None) or t.send_datetime >= from_datetime), [
                 Mail(
                     uid=int(mail_elem.get("uid")),
                     flags=mail_elem.find("flags").text.split(","),
                     from_name=mail_elem.find("e-from").get("realname"),
                     from_email=mail_elem.find("e-from").text,
-                    title=mail_elem.find("subject").text,
+                    title=(lambda t: t.text if (t is not None) else None)(mail_elem.find("subject")),
                     content_type=mail_elem.find("content-type").text,
                     send_datetime=datetime.datetime.strptime(mail_elem.find("internaldate").text, '%Y%m%dT%H%M%SZ'),
                     size=int(mail_elem.find("size").text)
@@ -271,7 +272,7 @@ async def test():
     async with db.session() as db_session:
         mail_session = await db_session.scalar(
             database.select(database.models.MailSession)
-            .where(database.models.MailSession.id == 2)
+            .where(database.models.MailSession.id == 7)
         )
         async with Samoware(mail_session=mail_session) as samoware:
             # await samoware.auth()
@@ -279,7 +280,8 @@ async def test():
             # await samoware.open_folder()
             # await db_session.merge(mail_session)
             # await db_session.commit()
-            print(await samoware.get_last_mail())
+            await samoware.send_session_info()
+            print(await samoware.get_active_sessions())
 
 
 if __name__ == "__main__":
