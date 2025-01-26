@@ -38,7 +38,7 @@ async def send_notify(session_id: int, mail: samoware.Mail, chat_id: int, mail_i
                 if mail_image.getbuffer().nbytes > 10 * 1024 * 1024:
                     await bot.send_document(
                         chat_id=chat_id,
-                        document=types.BufferedInputFile(mail_image.read(), filename="image.png"),
+                        document=types.BufferedInputFile(mail_image.read(), filename="mail_image.png"),
                         caption=text,
                         reply_markup=reply_markup,
                         disable_notification=not with_sound
@@ -46,7 +46,7 @@ async def send_notify(session_id: int, mail: samoware.Mail, chat_id: int, mail_i
                 else:
                     await bot.send_photo(
                         chat_id=chat_id,
-                        photo=types.BufferedInputFile(mail_image.read(), filename="image.png"),
+                        photo=types.BufferedInputFile(mail_image.read(), filename="mail_image.png"),
                         caption=text,
                         show_caption_above_media=True,
                         reply_markup=reply_markup,
