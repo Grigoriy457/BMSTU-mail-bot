@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import json
 import imgkit
 from io import BytesIO
+import re
 
 import config
 import database
@@ -170,6 +171,12 @@ class Samoware:
             if response.status != 200:
                 raise RequestError(f"Error while sending session info (status={response.status})")
 
+    async def check_auth(self):
+        async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync") as response:
+            if response.status == 550:
+                raise AuthError("Session expired")
+            return True
+
     async def open_folder(self):
         data = f"""<XIMSS>
                     <folderOpen mailbox="INBOX" sortField="INTERNALDATE" sortOrder="desc" folder="INBOX-MM-1" id="{self.open_inbox_folder_id}">
@@ -194,7 +201,7 @@ class Samoware:
 
     @staticmethod
     def parse_mails(mail_elems, from_datetime: datetime.datetime = None) -> List[Mail]:
-        return list(filter(lambda t: (from_datetime is None) or t.send_datetime > from_datetime, [
+        return sorted(filter(lambda t: (from_datetime is None) or t.send_datetime > from_datetime, [
             Mail(
                uid=int(mail_elem.get("uid")),
                is_ssen="Seen" in mail_elem.find("flags").text.split(","),
@@ -207,7 +214,7 @@ class Samoware:
             )
             for mail_elem in mail_elems
             if mail_elem.find("e-from") is not None
-       ]))
+       ]), key=lambda t: t.send_datetime)
 
     async def get_last_mail(self, from_datetime: datetime.datetime = None) -> List[Mail]:
         data = f"""<XIMSS><folderBrowse folder="INBOX-MM-1" id="{self.open_inbox_folder_id}"><index from="0" till="49"/></folderBrowse></XIMSS>"""
@@ -215,7 +222,7 @@ class Samoware:
             if response.status == 550:
                 raise AuthError("Session expired")
             response_xml = BeautifulSoup(await response.text(), 'lxml')
-            return self.parse_mails(response_xml.find_all("folderreport"))
+            return self.parse_mails(response_xml.find_all("folderreport"), from_datetime=from_datetime)
 
     async def sync_mail(self) -> List[Mail]:
         data = f"""<XIMSS><folderSync folder="INBOX-MM-1" limit="300" id="{self.open_inbox_folder_id}"></folderSync></XIMSS>"""
@@ -234,6 +241,7 @@ class Samoware:
                 'encoding': "UTF-8",
                 'quiet': ""
             }
+            html_text = re.sub(r'url\([^)]*\)', '', html_text)
             soup = BeautifulSoup(html_text, 'lxml')
             soup.find("table", {"class": "rfcheader"}).extract()
             for attachment_elem in soup.find_all("cg-message-attachment"):
@@ -248,12 +256,16 @@ class Samoware:
     async def delete_mail(self, mail_id):
         data = f"""<XIMSS><messageRemove folder="INBOX-MM-1" id="{self.open_inbox_folder_id}"><UID>{mail_id}</UID></messageRemove></XIMSS>"""
         async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
+            if response.status == 550:
+                raise AuthError("Session expired")
             if response.status != 200:
                 raise RequestError(f"Error while deleting mail (status={response.status})")
 
     async def read_mail(self, mail_id):
         data = f"""<XIMSS><messageMark flags="Read" folder="INBOX-MM-1" id="{self.open_inbox_folder_id}"><UID>{mail_id}</UID></messageMark></XIMSS>"""
         async with self.aiohttp_session.post(self.api_path + f"/Session/{self.mail_session.url_id}/sync", data=data) as response:
+            if response.status == 550:
+                raise AuthError("Session expired")
             if response.status != 200:
                 raise RequestError(f"Error while reading mail (status={response.status})")
 
@@ -263,16 +275,18 @@ async def test():
     async with db.session() as db_session:
         mail_session = await db_session.scalar(
             database.select(database.models.MailSession)
-            .where(database.models.MailSession.id == 2)
+            .where(database.models.MailSession.id == 6)
         )
         async with Samoware(mail_session=mail_session) as samoware:
-            # await samoware.auth()
-            # await samoware.send_session_info()
-            # await samoware.open_folder()
-            # await db_session.merge(mail_session)
-            # await db_session.commit()
-            print(await samoware.sync_mail())
-            print(await samoware.get_last_mail())
+            await samoware.auth()
+            await samoware.send_session_info()
+            await samoware.open_folder()
+            await db_session.merge(mail_session)
+            await db_session.commit()
+            with open("test.png", "wb") as file:
+                photo = await samoware.get_mail_image(196)
+                print(photo.getbuffer().nbytes)
+                file.write(photo.read())
 
 
 if __name__ == "__main__":

@@ -35,17 +35,28 @@ async def send_notify(session_id: int, mail: samoware.Mail, chat_id: int, mail_i
 
         if mail_image is not None:
             try:
-                await bot.send_photo(
-                    chat_id=chat_id,
-                    photo=types.BufferedInputFile(mail_image.read(), filename="image.png"),
-                    caption=text,
-                    show_caption_above_media=True,
-                    reply_markup=reply_markup,
-                    disable_notification=not with_sound
-                )
+                if mail_image.getbuffer().nbytes > 10 * 1024 * 1024:
+                    await bot.send_document(
+                        chat_id=chat_id,
+                        document=types.BufferedInputFile(mail_image.read(), filename="image.png"),
+                        caption=text,
+                        reply_markup=reply_markup,
+                        disable_notification=not with_sound
+                    )
+                else:
+                    await bot.send_photo(
+                        chat_id=chat_id,
+                        photo=types.BufferedInputFile(mail_image.read(), filename="image.png"),
+                        caption=text,
+                        show_caption_above_media=True,
+                        reply_markup=reply_markup,
+                        disable_notification=not with_sound
+                    )
                 return
             except (aiogram.exceptions.TelegramBadRequest, aiogram.exceptions.TelegramServerError):
                 logger.exception(f"Error while sending notify (mail_session_id={session_id}, mail_uid={mail.uid})")
+            except aiogram.exceptions.TelegramForbiddenError:
+                return
 
         await bot.send_message(
             chat_id=chat_id,
@@ -76,7 +87,7 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
             if len(last_mails) == 0:
                 return False
 
-            for last_mail in last_mails[::-1]:
+            for last_mail in last_mails:
                 if last_mail.is_ssen:
                     continue
                 mail_image = None
@@ -92,7 +103,7 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
                     with_sound=(await mail_session.awaitable_attrs.tg_user).notify_with_sound
                 )
 
-            mail_session.last_mail_datetime = last_mails[0].send_datetime
+            mail_session.last_mail_datetime = last_mails[-1].send_datetime
             await db_session.merge(mail_session)
             await db_session.commit()
 
@@ -102,7 +113,7 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
             return True
 
     except Exception:
-        logger.exception("Error while checking mail")
+        logger.exception(f"Error while checking mail (mail_session_id={mail_session.id})")
         return None
 
 
