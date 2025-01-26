@@ -194,7 +194,7 @@ class Samoware:
 
     @staticmethod
     def parse_mails(mail_elems, from_datetime: datetime.datetime = None) -> List[Mail]:
-        return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None) or t.send_datetime >= from_datetime), [
+        return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None) or t.send_datetime > from_datetime), [
             Mail(
                uid=int(mail_elem.get("uid")),
                flags=mail_elem.find("flags").text.split(","),
