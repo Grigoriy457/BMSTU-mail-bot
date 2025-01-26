@@ -77,6 +77,8 @@ async def check_by_session(mail_session, db_session) -> Optional[bool]:
                 return False
 
             for last_mail in last_mails[::-1]:
+                if last_mail.is_ssen:
+                    continue
                 mail_image = None
                 try:
                     mail_image = await samoware_mail.get_mail_image(last_mail.uid)

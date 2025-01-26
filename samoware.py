@@ -24,7 +24,7 @@ class RequestError(Exception):
 @dataclass
 class Mail:
     uid: int
-    flags: List[str]
+    is_ssen: bool
     from_email: str
     content_type: str
     send_datetime: datetime.datetime
@@ -194,10 +194,10 @@ class Samoware:
 
     @staticmethod
     def parse_mails(mail_elems, from_datetime: datetime.datetime = None) -> List[Mail]:
-        return list(filter(lambda t: ("Seen" not in t.flags) and ((from_datetime is None) or t.send_datetime > from_datetime), [
+        return list(filter(lambda t: (from_datetime is None) or t.send_datetime > from_datetime, [
             Mail(
                uid=int(mail_elem.get("uid")),
-               flags=mail_elem.find("flags").text.split(","),
+               is_ssen="Seen" in mail_elem.find("flags").text.split(","),
                from_name=mail_elem.find("e-from").get("realname"),
                from_email=mail_elem.find("e-from").text,
                title=(lambda t: t.text if (t is not None) else None)(mail_elem.find("subject")),
